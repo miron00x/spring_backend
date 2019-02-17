@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Demo</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.2/angular.min.js"></script>
+</head>
+<body ng-app="myApp">
+    <p>Привет, мир</p>
+    <table class="table" ng-controller="documentsCtrl">
+        <thead class="thead-inverse">
+        <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Uploaded by</th>
+            <th>Upload date</th>
+            <th>Last update</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="doc in docs">
+            <th scope="row">{{ $index + 1 }}</th>
+            <td>{{doc.Name}}</td>
+            <td>{{doc.User}}</td>
+            <td>{{doc.Upload}}</td>
+            <td>{{doc.Update}}</td>
+        </tr>
+        </tbody>
+    </table>
+</body>
+</html>
