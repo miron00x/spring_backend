@@ -18,5 +18,7 @@ public interface DocumentService {
     Collection<Document> findPaginated(int page, int size, String sortColumn, String sortDirection);
     void delete();
 
-    ResponseEntity<ByteArrayResource> downloadById(int id);
+    ResponseEntity<ByteArrayResource> downloadById(long id);
+
+    Document upDocProp(Document document);
 }

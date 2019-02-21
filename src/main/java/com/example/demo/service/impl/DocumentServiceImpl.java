@@ -3,6 +3,7 @@ package com.example.demo.service.impl;
 import com.example.demo.dao.DocumentRepository;
 import com.example.demo.dao.UserRepository;
 import com.example.demo.domain.Document;
+import com.example.demo.domain.Role;
 import com.example.demo.domain.User;
 import com.example.demo.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +52,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public void delete(long id) {
-        File file = new File(PATH, documentRepository.findById(id).get().getDocName());
+        File file = new File(PATH + "\\" + documentRepository.findById(id).get().getUser().getUserName(), documentRepository.findById(id).get().getDocName());
         file.delete();
         documentRepository.deleteById(id);
     }
@@ -67,6 +68,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Document create(MultipartFile file) {
+        for (Document document : documentRepository.findByUserUserName(getCurrentUsername())){
+            if (document.getDocName().equals(file.getOriginalFilename())) throw new IllegalStateException();
+        }
         return documentRepository.save(createFile(file));
     }
 
@@ -80,7 +84,7 @@ public class DocumentServiceImpl implements DocumentService {
             try {
                 byte[] bytes = file.getBytes();
                 BufferedOutputStream stream =
-                        new BufferedOutputStream(new FileOutputStream(new File(PATH, name)));
+                        new BufferedOutputStream(new FileOutputStream(new File(PATH + "\\" + getCurrentUsername(), name)));
                 stream.write(bytes);
                 stream.close();
                 document.setUploadDate(new Date());
@@ -97,7 +101,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Document update(Document document, MultipartFile file) {
-        File prev_file = new File(PATH, documentRepository.findById(document.getId()).get().getDocName());
+        File prev_file = new File(PATH + "\\" + getCurrentUsername(), documentRepository.findById(document.getId()).get().getDocName());
         prev_file.delete();
         Document updateDocument = createFile(file);
         updateDocument.setId(document.getId());
@@ -127,18 +131,23 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public void delete() {
-        Collection<Document> documents = documentRepository.findByUserUserName(getCurrentUsername());
+        Collection<Document> documents;
+        if (userRepository.findByUserName(getCurrentUsername()).get().getRole().equals(Role.USER))
+            documents = documentRepository.findByUserUserName(getCurrentUsername());
+        else
+            documents = documentRepository.findAll();
+
         for (Document document : documents)
-            documentRepository.deleteById(document.getId());
+            delete(document.getId());
     }
 
     @Override
-    public ResponseEntity<ByteArrayResource> downloadById(int id) {
+    public ResponseEntity<ByteArrayResource> downloadById(long id) {
         String fileName = getById(id).get().getDocName();
         String mineType = servletContext.getMimeType(fileName);
         MediaType mediaType = MediaType.parseMediaType(mineType);
 
-        Path path = Paths.get(PATH + "/" + fileName);
+        Path path = Paths.get(PATH + "\\" + documentRepository.findById(id).get().getUser().getUserName() + "/" + fileName);
         byte[] data = new byte[0];
         try {
             data = Files.readAllBytes(path);
@@ -155,6 +164,13 @@ public class DocumentServiceImpl implements DocumentService {
                 // Content-Lengh
                 .contentLength(data.length) //
                 .body(resource);
+    }
+
+    @Override
+    public Document upDocProp(Document document) {
+        File file = new File(PATH + "\\" + getCurrentUsername(), documentRepository.findById(document.getId()).get().getDocName());
+        file.renameTo(new File(PATH + "\\" + getCurrentUsername(), document.getDocName()));
+        return documentRepository.save(document);
     }
 
     public String getCurrentUsername(){

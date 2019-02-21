@@ -1,6 +1,8 @@
 package com.example.demo.service.impl;
 
 import com.example.demo.domain.User;
+import com.example.demo.service.impl.UserDetailsServiceImpl;
+import com.example.demo.service.impl.UserServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.WebSecurityEnablerConfiguration;
@@ -31,8 +33,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     UserServiceImpl userService;
-
-    public static User currenUser;
 
     @Bean
     public UserDetailsService userDetailsService() {
@@ -67,7 +67,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         public void onAuthenticationSuccess(HttpServletRequest request,
                                             HttpServletResponse response, Authentication authentication) throws IOException {
             User user = userService.getByName(authentication.getName()).get();
-            currenUser = user;
+            //currenUser = user;
             ObjectMapper mapper = new ObjectMapper();
             //response.setHeader("user", mapper.writeValueAsString(user));
             response.setContentType("application/json");

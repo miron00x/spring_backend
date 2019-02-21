@@ -1,31 +1,15 @@
 package com.example.demo.controller;
 
 import com.example.demo.domain.Document;
-import com.example.demo.domain.Role;
-import com.example.demo.domain.User;
 import com.example.demo.service.impl.DocumentServiceImpl;
-import com.example.demo.service.impl.WebSecurityConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.data.domain.Page;
-import org.springframework.data.rest.webmvc.ResourceNotFoundException;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletContext;
-import javax.validation.Valid;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
-import java.util.Optional;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
@@ -49,7 +33,7 @@ public class DocumentController {
     }
 
     @GetMapping("/api/documents/download/{id}")
-    ResponseEntity<ByteArrayResource> downloadDocumentsById(@PathVariable int id) throws IOException {
+    ResponseEntity<ByteArrayResource> downloadDocumentsById(@PathVariable long id) throws IOException {
         return documentService.downloadById(id);
     }
 
@@ -75,6 +59,11 @@ public class DocumentController {
     public Document updateDocument(@PathVariable Long documentId,
                                    @RequestParam("uploadFile") MultipartFile file) {
         return documentService.update(documentService.getById(documentId).get(), file);
+    }
+
+    @PostMapping("/api/documents/upd")
+    public Document upDocProp(@RequestBody Document document) {
+        return documentService.upDocProp(document);
     }
 
     @DeleteMapping("/api/documents/delete/{documentId}")
