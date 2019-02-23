@@ -34,7 +34,7 @@ import java.util.Optional;
 
 @Service
 public class DocumentServiceImpl implements DocumentService {
-    private static final String PATH = "D:\\Miron\\dich\\demo\\src\\main\\resources\\documents";
+    private static final String PATH = ".\\src\\main\\resources\\documents";
 
     @Autowired
     ServletContext servletContext;
@@ -95,6 +95,7 @@ public class DocumentServiceImpl implements DocumentService {
             }
         } else {
             //return "Вам не удалось загрузить " + name + " потому что файл пустой.";
+            //throw new NullPointerException();
         }
         return null;
     }
