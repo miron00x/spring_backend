@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.domain.Document;
+import com.example.demo.domain.PageRequestModel;
 import com.example.demo.service.impl.DocumentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -8,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.Collection;
 
 @CrossOrigin(origins = "http://localhost:4200")
@@ -29,11 +29,11 @@ public class DocumentController {
 
     @GetMapping("/api/documents/id/{id}")
     Document readDocumentsById(@PathVariable int id){
-        return documentService.getById(id).get();
+        return documentService.getById(id).orElseThrow(NullPointerException::new);
     }
 
     @GetMapping("/api/documents/download/{id}")
-    ResponseEntity<ByteArrayResource> downloadDocumentsById(@PathVariable long id) throws IOException {
+    ResponseEntity<ByteArrayResource> downloadDocumentsById(@PathVariable long id) {
         return documentService.downloadById(id);
     }
 
@@ -43,11 +43,14 @@ public class DocumentController {
         method = RequestMethod.GET
     )
     public Collection<Document> readDocumentsPaginated(
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "2") int size,
-            @RequestParam(value = "sortColumn", defaultValue = "docName") String sortColumn,
-            @RequestParam(value = "sortDirection", defaultValue = "DESC") String sortDirection){
-        return documentService.findPaginated(page, size, sortColumn, sortDirection);
+            @ModelAttribute("pageRequestModel") PageRequestModel pageRequestModel
+    ){
+        return documentService.findPaginated(
+                pageRequestModel.getPage(),
+                pageRequestModel.getSize(),
+                pageRequestModel.getSortColumn(),
+                pageRequestModel.getSortDirection()
+        );
     }
 
     @PostMapping("/api/documents/create")
@@ -58,7 +61,7 @@ public class DocumentController {
     @PutMapping("/api/documents/{documentId}")
     public Document updateDocument(@PathVariable Long documentId,
                                    @RequestParam("uploadFile") MultipartFile file) {
-        return documentService.update(documentService.getById(documentId).get(), file);
+        return documentService.update(documentService.getById(documentId).orElseThrow(NullPointerException::new), file);
     }
 
     @PostMapping("/api/documents/upd")

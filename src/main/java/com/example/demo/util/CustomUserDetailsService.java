@@ -1,8 +1,9 @@
-package com.example.demo.service.impl;
+package com.example.demo.util;
 
 import com.example.demo.dao.UserRepository;
 import com.example.demo.domain.Role;
 import com.example.demo.domain.User;
+import com.example.demo.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,21 +17,18 @@ import java.util.Collection;
 import java.util.List;
 
 @Service
-public class UserDetailsServiceImpl implements UserDetailsService {
+public class CustomUserDetailsService implements UserDetailsService {
     @Autowired
     private UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        //System.out.println("FIND USER: " + username);
-        User domainUser = userRepository.findByUserName(username).get();
+        System.out.println("FIND USER: " + username);
+        User domainUser = userRepository.findByUserName(username).orElseThrow(UserNotFoundException::new);
+        System.out.println(domainUser.getPassword());
         return new org.springframework.security.core.userdetails.User(
                 domainUser.getUserName(),
-                "{noop}" + domainUser.getPassword(),
-                true,
-                true,
-                true,
-                true,
+                domainUser.getPassword(),
                 getAuthorities(domainUser.getRole())
         );
     }

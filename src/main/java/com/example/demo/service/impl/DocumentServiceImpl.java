@@ -5,10 +5,11 @@ import com.example.demo.dao.UserRepository;
 import com.example.demo.domain.Document;
 import com.example.demo.domain.Role;
 import com.example.demo.domain.User;
+import com.example.demo.exception.DocNotFondException;
+import com.example.demo.exception.UserNotFoundException;
 import com.example.demo.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
@@ -29,7 +30,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -52,9 +52,12 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public void delete(long id) {
-        File file = new File(PATH + "\\" + documentRepository.findById(id).get().getUser().getUserName(), documentRepository.findById(id).get().getDocName());
-        file.delete();
-        documentRepository.deleteById(id);
+        File file = new File(PATH + "\\" + getDocById(id).getUser().getUserName(), documentRepository.findById(id).orElseThrow(NullPointerException::new).getDocName());
+        if(file.delete()) {
+            documentRepository.deleteById(id);
+        } else {
+            throw new RuntimeException("Error deleting file");
+        }
     }
 
     public Collection<Document> getByUserName(String username){
@@ -68,18 +71,19 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Document create(MultipartFile file) {
-        for (Document document : documentRepository.findByUserUserName(getCurrentUsername())){
-            if (document.getDocName().equals(file.getOriginalFilename())) throw new IllegalStateException();
-        }
         return documentRepository.save(createFile(file));
     }
 
     public Document createFile(MultipartFile file) {
         String name = file.getOriginalFilename();
+        for (Document document : documentRepository.findByUserUserName(getCurrentUsername())){
+            if (document.getDocName().equals(name)) throw new IllegalStateException("This file already exist");
+        }
         Document document = new Document();
         document.setDocName(name);
-        User currentUser = userRepository.findByUserName(getCurrentUsername()).get();
+        User currentUser = getUserByName(getCurrentUsername());
         document.setUser(currentUser);
+        if (file.getSize() > 1024*1024*20) throw new  RuntimeException("Unfortunately file size is over 20MB");
         if (!file.isEmpty()) {
             try {
                 byte[] bytes = file.getBytes();
@@ -94,35 +98,35 @@ public class DocumentServiceImpl implements DocumentService {
                 //return "Вам не удалось загрузить " + name + " => " + e.getMessage();
             }
         } else {
-            //return "Вам не удалось загрузить " + name + " потому что файл пустой.";
-            //throw new NullPointerException();
+            throw new NullPointerException("File is empty");
         }
-        return null;
+        throw new RuntimeException("Error creating file");
     }
 
     @Override
     public Document update(Document document, MultipartFile file) {
-        File prev_file = new File(PATH + "\\" + getCurrentUsername(), documentRepository.findById(document.getId()).get().getDocName());
-        prev_file.delete();
-        Document updateDocument = createFile(file);
-        updateDocument.setId(document.getId());
-        updateDocument.setUpdateDate(new Date());
-        return documentRepository.saveAndFlush(updateDocument);
+        File prev_file = new File(PATH + "\\" + getCurrentUsername(), getDocById(document.getId()).getDocName());
+        if(prev_file.delete()) {
+            Document updateDocument = createFile(file);
+            updateDocument.setId(document.getId());
+            updateDocument.setUpdateDate(new Date());
+            return documentRepository.saveAndFlush(updateDocument);
+        }
+        throw new RuntimeException("Error updating file");
     }
 
     @Override
     public Collection<Document> findPaginated(int page, int size, String sortColumn, String sortDirection) {
-        User currentUser = userRepository.findByUserName(getCurrentUsername()).get();
+        User currentUser = getUserByName(getCurrentUsername());
         PageRequest pageRequest;
         if (sortDirection.equals("NULL")) {
-            pageRequest = new PageRequest(page, size);
+            pageRequest = PageRequest.of(page, size);
         } else {
-            pageRequest = new PageRequest(page, size, Sort.Direction.valueOf(sortDirection), sortColumn);
+            pageRequest = PageRequest.of(page, size, Sort.Direction.valueOf(sortDirection), sortColumn);
         }
         switch(currentUser.getRole()) {
             case USER:
-                List<Document> documents = documentRepository.findByUserUserName(currentUser.getUserName(), pageRequest);
-                return documents;
+                return documentRepository.findByUserUserName(currentUser.getUserName(), pageRequest);
             case ADMIN:
                 return documentRepository.findAll(pageRequest).getContent();
             default:
@@ -133,7 +137,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public void delete() {
         Collection<Document> documents;
-        if (userRepository.findByUserName(getCurrentUsername()).get().getRole().equals(Role.USER))
+        if (getUserByName(getCurrentUsername()).getRole().equals(Role.USER))
             documents = documentRepository.findByUserUserName(getCurrentUsername());
         else
             documents = documentRepository.findAll();
@@ -144,11 +148,11 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public ResponseEntity<ByteArrayResource> downloadById(long id) {
-        String fileName = getById(id).get().getDocName();
+        String fileName = getDocById(id).getDocName();
         String mineType = servletContext.getMimeType(fileName);
         MediaType mediaType = MediaType.parseMediaType(mineType);
 
-        Path path = Paths.get(PATH + "\\" + documentRepository.findById(id).get().getUser().getUserName() + "/" + fileName);
+        Path path = Paths.get(PATH + "\\" + getDocById(id).getUser().getUserName() + "/" + fileName);
         byte[] data = new byte[0];
         try {
             data = Files.readAllBytes(path);
@@ -169,13 +173,23 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Document upDocProp(Document document) {
-        File file = new File(PATH + "\\" + getCurrentUsername(), documentRepository.findById(document.getId()).get().getDocName());
-        file.renameTo(new File(PATH + "\\" + getCurrentUsername(), document.getDocName()));
-        return documentRepository.save(document);
+        File file = new File(PATH + "\\" + getCurrentUsername(), getDocById(document.getId()).getDocName());
+        if(file.renameTo(new File(PATH + "\\" + getCurrentUsername(), document.getDocName()))) {
+            return documentRepository.save(document);
+        }
+        throw new RuntimeException("Error updating properties");
     }
 
     public String getCurrentUsername(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication.getName();
+    }
+
+    public Document getDocById(long id){
+        return documentRepository.findById(id).orElseThrow(DocNotFondException::new);
+    }
+
+    public User getUserByName(String name){
+        return userRepository.findByUserName(name).orElseThrow(UserNotFoundException::new);
     }
 }
