@@ -7,33 +7,33 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
-@CrossOrigin(origins = "http://localhost:4200")
 @RestController
+@RequestMapping("/api/users")
 public class UserController {
     @Autowired
     UserServiceImpl userService;
 
-    @GetMapping("/api/users/{username}")
-    User readUser(@PathVariable String username){
+    private static final String GET_BY_NAME = "/{username}";
+    private static final String CREATE = "/{username}";
+    private static final String UPD = "/{username}";
+    private static final String DELETE_BY_ID = "/{userId}";
+
+    @GetMapping(GET_BY_NAME)
+    public User readUser(@PathVariable String username){
         return userService.getByName(username);
     }
 
-    @GetMapping("/api/user")
-    User readUserByBody(@Valid @RequestBody String username){
-        return userService.getByName(username);
-    }
-
-    @PostMapping("/api/{username}")
+    @PostMapping(CREATE)
     public User addUser(@Valid @RequestBody User user) {
         return userService.create(user);
     }
 
-    @PutMapping("/api/{username}")
+    @PutMapping(UPD)
     public User updateUser(@Valid @RequestBody User userRequest) {
         return userService.update(userRequest);
     }
 
-    @DeleteMapping("/api/{username}/{userId}")
+    @DeleteMapping(DELETE_BY_ID)
     public void deleteUser(@PathVariable Long userId) {
         userService.delete(userId);
     }

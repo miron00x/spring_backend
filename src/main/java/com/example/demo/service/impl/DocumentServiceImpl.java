@@ -70,16 +70,26 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Document create(MultipartFile file) {
-        return documentRepository.save(createFile(file));
+    public Document create(MultipartFile file, Document docFromUser) {
+        Document document = documentRepository.save(createFile(file, docFromUser));
+        File existFile = new File(PATH + "\\" + getCurrentUsername(), document.getDocName());
+        document.setDocName(document.getId() + "#" + document.getDocName());
+        existFile.renameTo(new File(PATH + "\\" + getCurrentUsername(), document.getDocName()));
+        documentRepository.saveAndFlush(document);
+        return document;
     }
 
-    public Document createFile(MultipartFile file) {
+    public Document createFile(MultipartFile file, Document docFromUser) {
+        /*
         String name = file.getOriginalFilename();
         for (Document document : documentRepository.findByUserUserName(getCurrentUsername())){
             if (document.getDocName().equals(name)) throw new IllegalStateException("This file already exist");
         }
+        */
         Document document = new Document();
+        document.setVisibleName(docFromUser.getVisibleName());
+        document.setDescription(docFromUser.getDescription());
+        String name  = file.getOriginalFilename();
         document.setDocName(name);
         User currentUser = getUserByName(getCurrentUsername());
         document.setUser(currentUser);
@@ -104,13 +114,24 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Document update(Document document, MultipartFile file) {
-        File prev_file = new File(PATH + "\\" + getCurrentUsername(), getDocById(document.getId()).getDocName());
+    public Document update(Document newDoc, Document document, MultipartFile file) {
+        //System.out.println(document.getUser().getId());
+        //System.out.println(userRepository.findById(document.getUser().getId()));
+        User user = userRepository.findById(document.getUser().getId()).orElseThrow(UserNotFoundException::new);
+        File prev_file = new File(
+                PATH + "\\" + user.getUserName(),
+                getDocById(document.getId()).getDocName()
+        );
         if(prev_file.delete()) {
-            Document updateDocument = createFile(file);
+            Document updateDocument = createFile(file, newDoc);
             updateDocument.setId(document.getId());
+            updateDocument = documentRepository.save(updateDocument);
             updateDocument.setUpdateDate(new Date());
-            return documentRepository.saveAndFlush(updateDocument);
+            File existFile = new File(PATH + "\\" + getCurrentUsername(), updateDocument.getDocName());
+            updateDocument.setDocName(updateDocument.getId() + "#" + updateDocument.getDocName());
+            existFile.renameTo(new File(PATH + "\\" + getCurrentUsername(), updateDocument.getDocName()));
+            documentRepository.saveAndFlush(updateDocument);
+            return updateDocument;
         }
         throw new RuntimeException("Error updating file");
     }
@@ -173,11 +194,14 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Document upDocProp(Document document) {
+        /*
         File file = new File(PATH + "\\" + getCurrentUsername(), getDocById(document.getId()).getDocName());
         if(file.renameTo(new File(PATH + "\\" + getCurrentUsername(), document.getDocName()))) {
             return documentRepository.save(document);
         }
         throw new RuntimeException("Error updating properties");
+        */
+        return documentRepository.save(document);
     }
 
     public String getCurrentUsername(){

@@ -18,6 +18,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.access.AccessDeniedHandlerImpl;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -26,6 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 
 @Configuration
 @EnableGlobalMethodSecurity(securedEnabled = true)
@@ -47,7 +51,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.httpBasic()
-                .and().cors()
+                .and().cors().configurationSource(request -> {
+                    CorsConfiguration corsConfiguration = new CorsConfiguration().applyPermitDefaultValues();
+                    corsConfiguration.addAllowedMethod("DELETE");
+                    corsConfiguration.addAllowedMethod("PUT");
+                    corsConfiguration.addAllowedMethod("OPTIONS");
+            return corsConfiguration;
+        })
                 .and().authorizeRequests()
                 .anyRequest().authenticated()
                 .and()
@@ -85,18 +95,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
             PrintWriter out = response.getWriter();
             out.write(mapper.writeValueAsString(user));
             out.flush();
-        }
-    }
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new CorsAdapter();
-    }
-
-    class CorsAdapter implements WebMvcConfigurer{
-        @Override
-        public void addCorsMappings(CorsRegistry registry) {
-            registry.addMapping("/**").allowedOrigins("http://localhost:4200");
         }
     }
 }

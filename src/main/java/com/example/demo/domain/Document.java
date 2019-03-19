@@ -20,6 +20,12 @@ public class Document {
     @Column(name = "docname")
     private String docName;
 
+    @Column(name = "visiblename")
+    private String visibleName;
+
+    @Column(name = "description")
+    private String description;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

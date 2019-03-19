@@ -10,13 +10,16 @@ import java.util.Optional;
 
 public interface DocumentService {
     Collection<Document> getAll();
-    void delete(long id);
     Collection<Document> getByUserName(String name);
     Optional<Document> getById(long id);
-    Document create(MultipartFile file);
-    Document update(Document document, MultipartFile file);
-    Collection<Document> findPaginated(int page, int size, String sortColumn, String sortDirection);
+
+    void delete(long id);
     void delete();
+
+    Document create(MultipartFile file, Document document);
+    Document update(Document newDoc, Document document, MultipartFile file);
+
+    Collection<Document> findPaginated(int page, int size, String sortColumn, String sortDirection);
 
     ResponseEntity<ByteArrayResource> downloadById(long id);
 
